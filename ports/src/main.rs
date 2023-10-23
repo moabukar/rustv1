@@ -20,6 +20,7 @@ const TEXT_404: &str = "
 </body>
 </html>";
 
+#[allow(dead_code)]
 const TEXT_500: &str = "
 <html>
 <head><title>500 Internal Server Error</title></head>
@@ -131,7 +132,7 @@ fn handle_client(mut stream: TcpStream) {
 }
 
 fn main() -> io::Result<()> {
-    let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:8082").unwrap();
 
     // accept connections and process them serially
     for stream in listener.incoming() {
