@@ -37,3 +37,27 @@ fn create_filename(s: String) -> String {
         part
     }
 }
+
+fn load_file(filename: String) -> Result<File, String> {
+    // you could pass in '../../rootfile' in here
+    match File::open(format!("{}{}", PUT_HTML_HERE, filename)) {
+        Err(why) => return Err(format!("no {}", why).to_string()),
+        Ok(file) => return Ok(file),
+    }
+}
+
+fn read_stream<'a>(stream: &'a mut TcpStream) -> String {
+    let mut buf = String::new();
+    let mut b = [0; 1];
+    while stream.read(&mut b).is_ok() {
+        buf += str::from_utf8(&b).unwrap();
+        if buf.ends_with("\r\n\r\n") {
+            break;
+        }
+    }
+    println!("handle this: {:?}", buf);
+    let mut parts = buf.split(' ');
+    let _method = parts.next(); // http method: GET / POST / PUT
+    let url = parts.next().unwrap(); // PATH
+    return url.to_string();
+}
