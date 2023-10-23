@@ -129,3 +129,13 @@ fn handle_client(mut stream: TcpStream) {
         Err(err) => println!("Error writing data to client {:?}", err),
     }
 }
+
+fn main() -> io::Result<()> {
+    let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
+
+    // accept connections and process them serially
+    for stream in listener.incoming() {
+        handle_client(stream?);
+    }
+    Ok(())
+}
