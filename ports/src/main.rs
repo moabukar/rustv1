@@ -61,3 +61,71 @@ fn read_stream<'a>(stream: &'a mut TcpStream) -> String {
     let url = parts.next().unwrap(); // PATH
     return url.to_string();
 }
+
+fn handle_client(mut stream: TcpStream) {
+    let url = read_stream(&mut stream);
+    let filename = create_filename(url);
+    let file_type = {
+        if filename.ends_with("txt") {
+            "text/text".to_string()
+        } else if filename.ends_with("html") || filename.ends_with("htm") {
+            "text/html".to_string()
+        } else {
+            "application/".to_string() + filename.split('.').last().unwrap_or("")
+        }
+    };
+    let file_option = load_file(filename);
+
+    let (http_code, data_len) = match file_option {
+        Ok(ref data) => match data.metadata() {
+            Ok(inner_data) => (format!("HTTP/1.1 200 OK"), inner_data.len() as usize),
+            Err(ref _err) => panic!("Bad things happened"),
+        },
+        Err(ref _err) => (format!("HTTP/1.1 404 Not Found"), TEXT_404.len()),
+    };
+
+    let headers = vec![
+        http_code.as_ref(),
+        "Server: ExperimentalRustyServer",
+        "Connection: close",
+        format!("Content-Type: {}", file_type).as_ref(),
+        format!("Date: {} UTC", Utc::now().format("%a, %e %b %Y %T")).as_ref(),
+        format!("Content-Length: {}", data_len).as_ref(),
+    ].join("\n") + "\n\n";
+
+    if let Err(err) = stream.write_all(headers.as_bytes()) {
+        panic!("Error writing to buffer: {}", err)
+    };
+
+    let data_send = match file_option {
+        Ok(d) => {
+            let mut by = io::BufReader::new(d);
+            let mut buffer = [0; 10000];
+            let mut bytes_read = 10000;
+            let mut result_of_send: Result<(), io::Error> =
+                Result::Err(io::Error::new(io::ErrorKind::Other, "No data read & nothing sent!"));
+
+            while bytes_read == 10000 {
+                let a = by.read(&mut buffer);
+                match a {
+                    Err(e) => {
+                        result_of_send = Result::Err(e);
+                    }
+                    Ok(amount_read) => {
+                        result_of_send = stream.write_all(&buffer);
+                        bytes_read = amount_read;
+                    }
+                }
+                if result_of_send.is_err() {
+                    break;
+                }
+            }
+            result_of_send
+        }
+        Err(_e) => stream.write_all(TEXT_404.as_bytes()),
+    };
+    match data_send {
+        Ok(_) => println!("Wrote {} bytes to client", data_len),
+        Err(err) => println!("Error writing data to client {:?}", err),
+    }
+}
