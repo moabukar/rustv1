@@ -18,7 +18,7 @@ impl EventHandler for Handler {
             .expect("Channel ID should be a valid u64");
 
         let channel = ChannelId(channel_id);
-        let _ = channel.say(&ctx.http, "Hello, team!").await;
+        let _ = channel.say(&ctx.http, "Testt").await;
     }
 }
 
